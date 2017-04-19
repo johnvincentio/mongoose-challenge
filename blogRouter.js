@@ -36,6 +36,19 @@ router.get('/:id', (req, res) => {
         });
 });
 
+router.get('/author', (req, res) => {
+    BlogModel.findOne()
+    .exec()
+    .then(blog => {
+        console.log(blog.fullName);     // virtual property getter
+        res.json(blog.getAuthor());
+    })
+    .catch(err => {
+        console.error(err);
+        res.status(500).json({message: 'Internal server error'});
+    });
+});
+
 router.post('/', jsonParser, (req, res) => {
     const requiredFields = ['title', 'content', 'author'];
     for (let i = 0; i < requiredFields.length; i++) {
@@ -59,7 +72,13 @@ router.post('/', jsonParser, (req, res) => {
 });
 
 router.put('/:id', jsonParser, (req, res) => {
-    console.log("Put request");
+    console.log("Put request; req.params.id "+req.params.id);
+        if (! (req.params.id && req.body.id && req.params.id === req.body.id)) {
+        const message2 = (
+            `Request path id (${req.params.id}) and request body id ${req.body.id}) must match`);
+        console.error(message2);
+        res.status(400).send(message2);
+    }
     const requiredFields = ['id'];
     for (let i = 0; i < requiredFields.length; i++) {
         const field = requiredFields[i];
@@ -68,12 +87,6 @@ router.put('/:id', jsonParser, (req, res) => {
             console.error(message);
             return res.status(400).send(message);
         }
-    }
-    if (req.params.id !== req.body.id) {
-        const message2 = (
-            `Request path id (${req.params.id}) and request body id (${req.body.id}) must match`);
-        console.error(message2);
-        return res.status(400).send(message2);
     }
 
     // we only support a subset of fields being updateable.
@@ -90,7 +103,7 @@ router.put('/:id', jsonParser, (req, res) => {
     console.log(`Updating blog item \`${req.params.id}\``);
     BlogModel.findByIdAndUpdate(req.params.id, {$set: toUpdate}, {new: true})
         .exec()
-        .then((item) => res.status(201).json(item.getAll()))
+        .then(item => res.status(201).json(item.getAll()))
         .catch(err => {
             console.error(err);
             res.status(500).json({message: 'Internal Server error'});
