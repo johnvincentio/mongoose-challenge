@@ -9,18 +9,31 @@ const router = express.Router();
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
 
-const {BlogPosts} = require('./models');
-
-BlogPosts.create('title-1', 'content-1', 'author-1');
-BlogPosts.create('title-2', 'content-2', 'author-2');
-BlogPosts.create('title-3', 'content-3', 'author-3');
+const {BlogModel} = require('./models');
 
 router.get('/', (req, res) => {
-    res.json(BlogPosts.get());
+    BlogModel
+        .find()
+        .limit(10)
+        .exec()
+        .then(blogs => {
+            res.json(blogs.map(blog => blog.getAll()));
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).json({message: 'Internal Server error'});
+        });
 });
 
 router.get('/:id', (req, res) => {
-    res.json(BlogPosts.get(req.params.id));
+    BlogModel
+        .findById(req.params.id)
+        .exec()
+        .then(blog => res.json(blog.getAll()))
+        .catch(err => {
+            console.error(err);
+            res.status(500).json({message: 'Internal Server error'});
+        });
 });
 
 router.post('/', jsonParser, (req, res) => {
@@ -34,13 +47,20 @@ router.post('/', jsonParser, (req, res) => {
         }
     }
 
-    const item = BlogPosts.create(req.body.title, req.body.content, req.body.author);
-    res.status(201).json(item);
+    BlogModel
+        .create({
+            title: req.body.title, content: req.body.content, author: req.body.author
+        })
+        .then(blog => res.status(201).json(blog.getAll()))
+        .catch(err => {
+            console.error(err);
+            res.status(500).json({message: 'Internal Server error'});
+        });
 });
 
 router.put('/:id', jsonParser, (req, res) => {
     console.log("Put request");
-    const requiredFields = ['id', 'title', 'content', 'author'];
+    const requiredFields = ['id'];
     for (let i = 0; i < requiredFields.length; i++) {
         const field = requiredFields[i];
         if (!(field in req.body)) {
@@ -55,22 +75,40 @@ router.put('/:id', jsonParser, (req, res) => {
         console.error(message2);
         return res.status(400).send(message2);
     }
-    console.log(`Updating blog item \`${req.params.id}\``);
-    const updatedItem = BlogPosts.update({
-        id: req.params.id,
-        title: req.body.title,
-        content: req.body.content,
-        author: req.body.author,
-        publishDate: req.body.publishDate || Date.now()
+
+    // we only support a subset of fields being updateable.
+    // if the user sent over any of the updatableFields, we update those values in document.
+    const toUpdate = {};
+    const updateableFields = ['title', 'content', 'author'];
+    updateableFields.forEach(field => {
+        if (field in req.body) {
+            toUpdate[field] = req.body[field];
+        }
     });
-//   res.status(204).json(updatedItem); // code of 204 appears to cause body to be empty.
-    res.status(200).json(updatedItem);
+
+    // {new: true} will return the updated version of the record.
+    console.log(`Updating blog item \`${req.params.id}\``);
+    BlogModel.findByIdAndUpdate(req.params.id, {$set: toUpdate}, {new: true})
+        .exec()
+        .then((item) => res.status(201).json(item.getAll()))
+        .catch(err => {
+            console.error(err);
+            res.status(500).json({message: 'Internal Server error'});
+        });
 });
 
 router.delete('/:id', (req, res) => {
-    BlogPosts.delete(req.params.id);
-    console.log(`Deleted blog item \`${req.params.id}\``);
-    res.status(204).end();
+    BlogModel
+        .findByIdAndRemove(req.params.id)
+        .exec()
+        .then(() => {
+            console.log(`Deleting blog item \`${req.params.id}\``);
+            res.status(204).end();
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).json({message: 'Internal Server error'});
+        });
 });
 
 module.exports = router;

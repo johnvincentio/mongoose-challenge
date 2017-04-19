@@ -39,7 +39,7 @@ describe('Blogs', function() {
                 res.body.should.be.a('array');
                 // because we create 3 items on app load
                 res.body.length.should.be.at.least(1);
-                const expectedKeys = ['id', 'title', 'content', 'author', 'publishDate'];
+                const expectedKeys = ['id', 'title', 'content', 'author', 'created'];
                 res.body.forEach(function(item) {
                     item.should.be.a('object');
                     item.should.include.keys(expectedKeys);
@@ -57,27 +57,27 @@ describe('Blogs', function() {
                     title: res.body[0].title,
                     content: res.body[0].content,
                     author: res.body[0].author,
-                    publishDate: res.body[0].publishDate
+                    created: res.body[0].created
                 };
                 return chai.request(app)
                     .get('/blog/'+firstItem.id)
                     .then(function(res) {
                         res.should.have.status(200);
                         res.body.should.be.a('object');
-                        res.body.should.include.keys('id', 'title', 'content', 'author', 'publishDate');
+                        res.body.should.include.keys('id', 'title', 'content', 'author', 'created');
 
                         res.body.id.should.equal(firstItem.id);
                         res.body.title.should.equal(firstItem.title);
                         res.body.content.should.equal(firstItem.content);
                         res.body.author.should.equal(firstItem.author);
-                        res.body.publishDate.should.equal(firstItem.publishDate);
+                        res.body.created.should.equal(firstItem.created);
                 });
             });
     });
 
     it('should add a blog on POST', function() {
         const newItem = {
-            title: 'title-99', content: 'content-99', author: 'author-99'
+            title: 'title-99', content: 'content-99', author: {firstName: 'Donald', lastName: 'Duck'}
         };
         return chai.request(app)
             .post('/blog')
@@ -87,11 +87,11 @@ describe('Blogs', function() {
             /* jshint -W030 */
                 res.should.be.json;
                 res.body.should.be.a('object');
-                res.body.should.include.keys('id', 'title', 'content', 'author', 'publishDate');
+                res.body.should.include.keys('id', 'title', 'content', 'author', 'created');
                 res.body.id.should.not.be.null;
                 res.body.title.should.equal(newItem.title);
                 res.body.content.should.equal(newItem.content);
-                res.body.author.should.equal(newItem.author);
+                res.body.author.should.equal(newItem.author.firstName + ' ' + newItem.author.lastName);
         });
     });
 
@@ -99,31 +99,30 @@ describe('Blogs', function() {
         const updateItem = {
             title: 'title-99',
             content: 'content-99',
-            author: 'author-99'
+            author: {firstName: 'first', lastName: 'last'}
         };
         return chai.request(app)
             .get('/blog')
             .then(function(res) {
                 res.should.have.status(200);
                 updateItem.id = res.body[0].id;
-                updateItem.publishDate = res.body[0].publishDate;
+                updateItem.created = res.body[0].created;
                 return chai.request(app)
                     .put('/blog/' + updateItem.id)
                     .send(updateItem);
             })
             .then(function(res) {
-                res.should.have.status(200);
+                res.should.have.status(201);
             /* jshint -W030 */
                 res.should.be.json;
                 res.body.should.be.a('object');
-                res.body.should.include.keys('id', 'title', 'content', 'author', 'publishDate');
+                res.body.should.include.keys('id', 'title', 'content', 'author', 'created');
                 res.body.id.should.not.be.null;
                 res.body.id.should.equal(updateItem.id);
                 res.body.title.should.equal(updateItem.title);
                 res.body.content.should.equal(updateItem.content);
-                res.body.author.should.equal(updateItem.author);
-                res.body.publishDate.should.equal(updateItem.publishDate);
-
+                res.body.author.should.equal(updateItem.author.firstName + ' ' + updateItem.author.lastName);
+                res.body.created.should.equal(updateItem.created);
             });
     });
 
