@@ -1,4 +1,4 @@
 
 ## Blogging Challenge
 
-[See notes](https://johnvincent.io/blog/mongoose-blog-app/)
+[See notes](https://johnvincent.io/mongoose-blog-app/)
